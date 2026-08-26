@@ -1078,8 +1078,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <div class="form-row">
           <label>Location</label>
-          <input type="text" placeholder="Search address, or drop a pin on the map" value="4th & Pine St, mock location">
-          <div class="form-hint">📍 Pin placement will be interactive on the live map.</div>
+          <div style="position:relative;">
+            <input type="text" id="addLocationInput" placeholder="Search the real address, landmark, or business…" autocomplete="off">
+            <div id="addLocationResults" class="map-search-results" style="left:0;right:0;"></div>
+          </div>
+          <div class="form-hint" id="addLocationHint">📍 Pick a real match from the list — that's what sets exactly where the pin lands on the map.</div>
         </div>
         <div class="form-row">
           <label>Severity</label>
@@ -1826,16 +1829,66 @@ function clearAddChaosAttachment(){
   });
 })();
 
+/* ---- add chaos: real location search (was completely fake before --
+   the Location field had a hardcoded "4th & Pine St, mock location" value
+   that nothing ever read, and the pin was actually placed by jittering
+   randomly around whatever the map's last "Check area" search happened to
+   be -- so an address in NJ could easily land in NYC if that's where the
+   map was last centered. Reuses the same /areas/search (Nominatim) lookup
+   that powers the map's search box, so what you pick here is what actually
+   gets used. ---- */
+let pendingChaosLocation = null; // {lat, lng, label} once a real result is picked
+let addLocationDebounce = null;
+document.getElementById('addLocationInput').addEventListener('input', (e)=>{
+  pendingChaosLocation = null; // typing invalidates whatever was previously picked
+  clearTimeout(addLocationDebounce);
+  const q = e.target.value.trim();
+  if(!q){ document.getElementById('addLocationResults').classList.remove('show'); return; }
+  addLocationDebounce = setTimeout(()=> runAddLocationSearch(q), 350);
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#addLocationInput') && !e.target.closest('#addLocationResults')){
+    document.getElementById('addLocationResults').classList.remove('show');
+  }
+});
+async function runAddLocationSearch(q){
+  const el = document.getElementById('addLocationResults');
+  let results = [];
+  try {
+    const c = window._activeArea || centerBase;
+    const data = await api(`/areas/search?q=${encodeURIComponent(q)}&lat=${c.lat}&lng=${c.lng}`);
+    results = data.results || [];
+  } catch(e){ results = []; }
+  if(!results.length){
+    el.innerHTML = `<div class="msr-empty">No matches — try a fuller address.</div>`;
+    el.classList.add('show');
+    return;
+  }
+  el.innerHTML = results.map((p,i)=> `<div class="msr-item" data-idx="${i}"><span>${escapeHtml(p.label)}</span></div>`).join('');
+  el.classList.add('show');
+  el.querySelectorAll('.msr-item').forEach(item=>{
+    item.onclick = ()=>{
+      const p = results[+item.dataset.idx];
+      pendingChaosLocation = p;
+      document.getElementById('addLocationInput').value = p.label;
+      el.classList.remove('show');
+    };
+  });
+}
+
 /* ---- add chaos (real POST) ---- */
 const addTypeCatMap = {"🚗 Accident":"accident","🔫 Shooting":"shooting","📣 Protest":"protest","🔥 Fire":"fire","🌪️ Severe weather":"weather","❓ Other":"other"};
 async function submitChaos(){
   if(!requireAuth()) return;
+  if(!pendingChaosLocation){
+    alert("Search for the location and pick a real match from the dropdown before submitting.");
+    return;
+  }
   const typeVal = document.getElementById("addType").value;
   const sevEl = document.querySelector("#severityPicker .severity-opt.selected");
   const descEl = document.querySelector("#view-add textarea");
   const description = descEl.value.trim() || "No description provided.";
-  const c = window._activeArea || centerBase;
-  const lat = c.lat + (Math.random()-0.5)*0.01, lng = c.lng + (Math.random()-0.5)*0.01;
+  const {lat, lng} = pendingChaosLocation;
   const body = {category: addTypeCatMap[typeVal] || "other", severity: sevEl ? sevEl.dataset.sev : "med", description, lat, lng};
   if(pendingAddChaosAttachment){
     if(pendingAddChaosAttachment.kind === 'gif') body.gif_url = pendingAddChaosAttachment.url;
