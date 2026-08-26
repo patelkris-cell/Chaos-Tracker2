@@ -72,15 +72,31 @@ class Settings(BaseSettings):
     # picker just shows "not configured" instead of failing.
     klipy_api_key: str = ""
 
-    # --- Password reset email (Gmail SMTP) ---
-    # Sends the "reset your password" link using your own Gmail account
-    # instead of a dedicated email service -- zero new signup, but Gmail
-    # requires an "app password" rather than your normal login password for
-    # SMTP access: turn on 2-Step Verification at myaccount.google.com/security,
-    # then create one at myaccount.google.com/apppasswords. Leave either
-    # blank and the email-reset endpoint reports itself unavailable (400)
-    # instead of failing -- the SMS-based reset (see app/otp.py) still works
-    # independently of this.
+    # --- Password reset email ---
+    # Two options, checked in this order:
+    #
+    # 1. Resend (RESEND_API_KEY) -- sends over a normal HTTPS API call, so it
+    #    works on Render's free tier. Free signup at resend.com, no card
+    #    needed, 100 emails/day. Without verifying your own domain, Resend's
+    #    shared "onboarding@resend.dev" sender can only deliver to the email
+    #    address you signed up to Resend with -- fine for a single-user app
+    #    like this one, since that'll be your own inbox. Leave
+    #    resend_from_email blank to use that default sender.
+    #
+    # 2. Gmail SMTP (GMAIL_ADDRESS/GMAIL_APP_PASSWORD) -- works fine for local
+    #    dev, but Render's free web services block all outbound SMTP traffic
+    #    (ports 25/465/587) as of Sept 2025, so this option silently cannot
+    #    work once deployed there -- keep it configured for running the
+    #    backend locally, but use Resend for the deployed version. Gmail
+    #    requires an "app password" rather than your normal login password:
+    #    turn on 2-Step Verification at myaccount.google.com/security, then
+    #    create one at myaccount.google.com/apppasswords.
+    #
+    # Leave all of these blank and the email-reset endpoint reports itself
+    # unavailable (400) instead of failing -- the SMS-based reset (see
+    # app/otp.py) still works independently of this.
+    resend_api_key: str = ""
+    resend_from_email: str = "onboarding@resend.dev"
     gmail_address: str = ""
     gmail_app_password: str = ""
 

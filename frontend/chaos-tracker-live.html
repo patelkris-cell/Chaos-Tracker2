@@ -1024,7 +1024,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <div id="leafletMap"></div>
             <div class="map-search">
               <div class="map-search-wrap">
-                <input type="search" id="mapSearchInput" name="chaos_map_query" placeholder="Search address, landmark, business, or a report…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+                <input type="search" id="mapSearchInput" name="chaos_map_query" placeholder="Search address, landmark, business, or a report…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly')">
                 <div id="mapSearchResults" class="map-search-results"></div>
               </div>
               <button class="btn btn-primary" onclick="searchLocation()">Check area</button>
@@ -1079,7 +1079,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="form-row">
           <label>Location</label>
           <div style="position:relative;">
-            <input type="search" id="addLocationInput" name="chaos_add_location_query" placeholder="Search the real address, landmark, or business…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+            <input type="search" id="addLocationInput" name="chaos_add_location_query" placeholder="Search the real address, landmark, or business…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly')">
             <div id="addLocationResults" class="map-search-results" style="left:0;right:0;"></div>
           </div>
           <div class="form-hint" id="addLocationHint">📍 Pick a real match from the list — that's what sets exactly where the pin lands on the map.</div>
