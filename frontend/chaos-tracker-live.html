@@ -98,9 +98,9 @@ html[data-theme="dark"] .legend-bar{background:linear-gradient(90deg,#184f95,#6d
 .form-row{margin-bottom:16px;}
 .form-row label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
 .form-hint{font-size:11.5px;color:var(--text-muted);margin-top:5px;}
-input[type=text], input[type=email], input[type=password], input[type=tel], textarea, select{
+input[type=text], input[type=email], input[type=password], input[type=tel], input[type=search], textarea, select{
   width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
-  color:var(--text-primary);font-size:13.5px;font-family:inherit;
+  color:var(--text-primary);font-size:13.5px;font-family:inherit;-webkit-appearance:none;appearance:none;
 }
 textarea{resize:vertical;min-height:90px;}
 input:focus, textarea:focus, select:focus{outline:2px solid var(--series-blue);outline-offset:1px;}
@@ -1024,7 +1024,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <div id="leafletMap"></div>
             <div class="map-search">
               <div class="map-search-wrap">
-                <input type="text" id="mapSearchInput" placeholder="Search address, landmark, business, or a report…" autocomplete="off">
+                <input type="search" id="mapSearchInput" name="chaos_map_query" placeholder="Search address, landmark, business, or a report…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
                 <div id="mapSearchResults" class="map-search-results"></div>
               </div>
               <button class="btn btn-primary" onclick="searchLocation()">Check area</button>
@@ -1079,7 +1079,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="form-row">
           <label>Location</label>
           <div style="position:relative;">
-            <input type="text" id="addLocationInput" placeholder="Search the real address, landmark, or business…" autocomplete="off">
+            <input type="search" id="addLocationInput" name="chaos_add_location_query" placeholder="Search the real address, landmark, or business…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
             <div id="addLocationResults" class="map-search-results" style="left:0;right:0;"></div>
           </div>
           <div class="form-hint" id="addLocationHint">📍 Pick a real match from the list — that's what sets exactly where the pin lands on the map.</div>
