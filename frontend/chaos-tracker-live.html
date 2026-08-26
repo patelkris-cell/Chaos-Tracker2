@@ -1456,7 +1456,7 @@ document.querySelectorAll(".nav-item").forEach(b=> b.onclick = ()=> showTab(b.da
 // backend is deployed (see README "Deploying"), replace the placeholder
 // below with its real https://...onrender.com URL. window.CHAOS_API_BASE
 // still wins if set, for anyone who wants to override this directly.
-const DEPLOYED_API_BASE = "https://chaos-tracker-api.onrender.com"; // <-- set this to your real Render backend URL
+const DEPLOYED_API_BASE = "https://chaos-tracker2.onrender.com"; // <-- your real Render backend URL
 const IS_LOCAL = location.protocol === "file:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
 const API_BASE = window.CHAOS_API_BASE || (IS_LOCAL ? "http://127.0.0.1:8000" : DEPLOYED_API_BASE);
 let authToken = localStorage.getItem('chaos_token') || null;
