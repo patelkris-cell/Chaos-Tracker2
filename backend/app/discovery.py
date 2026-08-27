@@ -38,10 +38,19 @@ def _region_phrase() -> str:
     return f"{counties} counties, {settings.discovery_state}"
 
 
-def _geocode_first(address_or_place: str, fallback_hint: str = "") -> tuple[float, float] | None:
+def _geocode_first(address_or_place: str) -> tuple[float, float] | None:
+    """Geocodes via the same Nominatim search the map's own address search
+    uses. Deliberately does NOT append the full multi-county discovery
+    region as a hint -- Nominatim's free-text matching gets confused by a
+    long list of counties tacked onto an otherwise-good address and returns
+    nothing (confirmed live: an address that geocodes fine on its own
+    returns zero results once "Middlesex, Union, Somerset..." is appended).
+    Claude is asked for a specific real address/place, which is normally
+    enough on its own; only add the state if it's missing entirely."""
     query = address_or_place.strip()
-    if fallback_hint and fallback_hint.lower() not in query.lower():
-        query = f"{query}, {fallback_hint}"
+    state = settings.discovery_state
+    if state and state.lower() not in query.lower():
+        query = f"{query}, {state}"
     results = places.search_places(query, limit=1)
     if not results:
         return None
@@ -187,7 +196,7 @@ def discover_events() -> list[dict]:
         if (ends_at or starts_at) < now:
             continue  # stale search result already in the past -- drop rather than show a finished event as "upcoming"
 
-        geocoded = _geocode_first(item.get("address_or_place", ""), fallback_hint=_region_phrase())
+        geocoded = _geocode_first(item.get("address_or_place", ""))
         if not geocoded:
             continue  # couldn't confirm a real place -- drop rather than guess coordinates
         lat, lng = geocoded
@@ -234,7 +243,7 @@ def discover_news() -> list[dict]:
     for item in result.get("items", []):
         if not item.get("source_url") or not item.get("headline"):
             continue
-        geocoded = _geocode_first(item.get("address_or_place", ""), fallback_hint=_region_phrase())
+        geocoded = _geocode_first(item.get("address_or_place", ""))
         if not geocoded:
             continue
         lat, lng = geocoded
