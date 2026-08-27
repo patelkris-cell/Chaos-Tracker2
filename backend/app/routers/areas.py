@@ -25,6 +25,28 @@ def search(
     return schemas.PlaceSearchResponse(results=results)
 
 
+@router.get("/_debug_search")
+def _debug_search(q: str = Query(..., min_length=1, max_length=200)):
+    """TEMPORARY diagnostic endpoint -- not used by the frontend. Calls
+    Nominatim directly and surfaces the raw status/error instead of
+    swallowing it, to find out why /areas/search has started returning
+    zero results for queries that used to work. Remove once diagnosed."""
+    import httpx as _httpx
+
+    from app.places import NOMINATIM_URL, USER_AGENT
+
+    params = {"q": q, "format": "jsonv2", "limit": 6, "addressdetails": 0}
+    try:
+        resp = _httpx.get(NOMINATIM_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=6.0)
+        return {
+            "status_code": resp.status_code,
+            "headers": dict(resp.headers),
+            "body": resp.text[:2000],
+        }
+    except Exception as e:
+        return {"exception_type": type(e).__name__, "exception": str(e)}
+
+
 @router.get("/insights", response_model=schemas.AreaInsights)
 def area_insights(
     lat: float = Query(...),
