@@ -195,12 +195,46 @@ class EventOut(BaseModel):
     lng: float
     starts_at: datetime.datetime
     ends_at: Optional[datetime.datetime]
+    venue_name: Optional[str] = None
+    expected_attendance: Optional[int] = None
+    chaos_score: Optional[int] = None
+    source_url: Optional[str] = None
+    ai_generated: bool = False
     thumbs_up: int
     thumbs_down: int
     comment_count: int
 
     class Config:
         from_attributes = True
+
+
+class EventDiscoverResult(BaseModel):
+    added: int
+    skipped_existing: int
+    events: list[EventOut]
+
+
+# ---------- Local news (AI-discovered, see app/discovery.py) ----------
+class NewsReportOut(BaseModel):
+    id: int
+    headline: str
+    summary: str
+    category: Category
+    lat: float
+    lng: float
+    source_name: str
+    source_url: str
+    published_at: Optional[datetime.datetime]
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NewsDiscoverResult(BaseModel):
+    added: int
+    skipped_existing: int
+    items: list[NewsReportOut]
 
 
 # ---------- Event reactions & comments ----------

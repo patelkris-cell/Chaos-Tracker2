@@ -133,10 +133,44 @@ class Event(Base):
     starts_at = Column(DateTime, nullable=False)
     ends_at = Column(DateTime, nullable=True)
 
+    # --- AI-discovered event fields (see app/discovery.py) ---
+    # All nullable/defaulted so manually-created events (the original
+    # EventCreate flow) are unaffected.
+    venue_name = Column(String(160), nullable=True)
+    expected_attendance = Column(Integer, nullable=True)
+    chaos_score = Column(Integer, nullable=True)  # 0-100 -- the "chaos meter", finer-grained than impact
+    source_url = Column(String(500), nullable=True)  # real listing this was found from, if AI-discovered
+    ai_generated = Column(Boolean, default=False, nullable=False)
+
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     reactions = relationship("EventReaction", back_populates="event", cascade="all, delete-orphan")
     event_comments = relationship("EventComment", back_populates="event", cascade="all, delete-orphan")
+
+
+class NewsReport(Base):
+    """Real local news items (accidents, fires, crime, etc.) discovered via
+    AI web search -- see app/discovery.py. Deliberately NOT the Incident
+    table: these are secondhand, unverified-by-us news summaries, not
+    firsthand user reports, and mixing them into Incident would let a news
+    blurb accumulate confirm/deny votes and a trust score exactly like a
+    real eyewitness report. Kept as its own read-only-to-users table so the
+    frontend can render them in a visibly distinct way."""
+    __tablename__ = "news_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    headline = Column(String(300), nullable=False)
+    summary = Column(Text, nullable=False)
+    category = Column(String(20), nullable=False)  # accident | shooting | protest | fire | weather | other
+
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+
+    source_name = Column(String(120), nullable=False)
+    source_url = Column(String(500), nullable=False, unique=True)  # dedup key across discovery runs
+    published_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class EventReaction(Base):

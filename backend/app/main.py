@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import areas, auth, chat, comments, events, gifs, incidents, uploads, users, verify
+from app.routers import areas, auth, chat, comments, events, gifs, incidents, news, uploads, users, verify
 
 # MVP-simple schema management: create any missing tables on startup.
 # Once the schema stabilizes, switch to Alembic migrations instead of this
@@ -39,6 +39,11 @@ _ensure_column("users", "reset_token", "VARCHAR(64)")
 _ensure_column("users", "reset_token_expires", "TIMESTAMP")
 _ensure_column("incidents", "image_url", "VARCHAR(500)")
 _ensure_column("incidents", "gif_url", "VARCHAR(500)")
+_ensure_column("events", "venue_name", "VARCHAR(160)")
+_ensure_column("events", "expected_attendance", "INTEGER")
+_ensure_column("events", "chaos_score", "INTEGER")
+_ensure_column("events", "source_url", "VARCHAR(500)")
+_ensure_column("events", "ai_generated", "BOOLEAN NOT NULL DEFAULT FALSE")
 
 app = FastAPI(
     title="Chaos Tracker API",
@@ -60,6 +65,7 @@ app.include_router(incidents.router)
 app.include_router(comments.router)
 app.include_router(verify.router)
 app.include_router(events.router)
+app.include_router(news.router)
 app.include_router(areas.router)
 app.include_router(chat.router)
 app.include_router(uploads.router)

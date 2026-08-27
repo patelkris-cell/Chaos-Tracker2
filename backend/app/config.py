@@ -57,6 +57,16 @@ class Settings(BaseSettings):
     # model ID list -- this default may go stale.
     anthropic_model: str = "claude-sonnet-4-5"
 
+    # --- AI-powered discovery (real events + real local news, see app/discovery.py) ---
+    # Both /events/discover and /news/discover search this fixed list of
+    # counties (plus discovery_state) rather than the map's current viewport --
+    # this is a single-user app tied to one real area, not a multi-tenant
+    # product, so "your area" is configured once here instead of built as a
+    # generic per-request geographic feature. Change these to your own
+    # county/state if you fork this for somewhere else.
+    discovery_counties: str = "Middlesex,Union,Somerset,Mercer,Monmouth,Ocean,Essex"
+    discovery_state: str = "New Jersey"
+
     # --- Census migration data (used by the /chat tool get_county_migration) ---
     # Free key from https://api.census.gov/data/key_signup.html. Leave blank and
     # that one tool will just report itself unavailable rather than failing.
@@ -131,6 +141,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def discovery_county_list(self) -> list[str]:
+        return [c.strip() for c in self.discovery_counties.split(",") if c.strip()]
 
 
 settings = Settings()

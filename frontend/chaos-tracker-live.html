@@ -253,6 +253,7 @@ html[data-theme="dark"] .leaflet-control-attribution a{color:var(--text-secondar
 .chaos-pin{background:var(--series-red);color:#fff;width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff;}
 .chaos-pin span{transform:rotate(45deg);font-size:12px;}
 .event-pin{background:var(--series-violet);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff;font-size:13px;}
+.news-pin{background:#5b6472;color:#fff;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff;font-size:11px;}
 .you-pin{width:18px;height:18px;border-radius:50%;background:var(--series-blue);border:3px solid #fff;box-shadow:0 0 0 4px rgba(42,120,214,.35),0 2px 6px rgba(0,0,0,.3);}
 .insights-card{margin-top:14px;padding:16px;display:none;}
 .insights-card.show{display:block;}
@@ -1017,9 +1018,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
               <div class="chip" data-f="fire">🔥 Fires</div>
               <div class="chip" data-f="weather">🌪️ Weather</div>
               <div class="chip active" data-f="events" id="eventsChip">🎪 Events</div>
+              <div class="chip" data-f="news" id="newsChip">📰 Local news</div>
             </div>
-            <div style="font-size:11.5px;color:var(--text-muted);">Last 30 days · 214 reports</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="font-size:11.5px;color:var(--text-muted);">Last 30 days · 214 reports</div>
+              <button class="btn" style="font-size:11px;padding:4px 9px;" id="discoverNewsBtn" onclick="discoverNews()" title="Search the web for real recent local news in your area">🔄 Check for local news</button>
+            </div>
           </div>
+          <div id="newsDiscoverStatus" style="font-size:11.5px;color:var(--text-muted);padding:0 2px 4px;"></div>
           <div style="position:relative;">
             <div id="leafletMap"></div>
             <div class="map-search">
@@ -1126,9 +1132,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     <!-- ===== EVENTS ===== -->
     <div class="view" id="view-events">
-      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;max-width:640px;">
-        Scheduled events that tend to affect chaos levels nearby — road closures, crowding, elevated police presence. These also show as pins on the Home map.
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;max-width:640px;margin-bottom:14px;">
+        <div style="font-size:12.5px;color:var(--text-muted);">
+          Scheduled events that tend to affect chaos levels nearby — road closures, crowding, elevated police presence. These also show as pins on the Home map.
+        </div>
+        <button class="btn btn-primary" style="white-space:nowrap;" id="discoverEventsBtn" onclick="discoverEvents()">🔎 Find real events</button>
       </div>
+      <div id="eventsDiscoverStatus" style="font-size:12px;color:var(--text-muted);max-width:640px;margin-bottom:10px;"></div>
       <div id="eventsList" style="display:flex;flex-direction:column;gap:12px;max-width:640px;"></div>
     </div>
 
@@ -1966,18 +1976,53 @@ function eventReactionPills(ev){
     <span class="reaction thumb-down ${mine===false?'active':''}" onclick="reactToEvent(${ev.id}, false)">👎 ${ev.thumbs_down}</span>
     <span class="reaction" onclick="openEventById(${ev.id})">💬 ${ev.comment_count} Comments</span>`;
 }
+function chaosMeterBar(score){
+  if(score===null || score===undefined) return "";
+  const color = score>=70 ? "var(--status-critical)" : score>=40 ? "var(--status-warn, #d97706)" : "var(--status-ok, #16a34a)";
+  return `
+    <div style="margin-top:8px;max-width:220px;">
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-muted);margin-bottom:2px;">
+        <span>Chaos meter</span><span>${score}/100</span>
+      </div>
+      <div style="height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;">
+        <div style="height:100%;width:${score}%;background:${color};"></div>
+      </div>
+    </div>`;
+}
 function renderEventsList(){
   document.getElementById("eventsList").innerHTML = mockEvents.map(ev=> `
     <div class="card event-card">
       <div class="event-icon">${ev.icon}</div>
       <div style="flex:1;">
-        <div class="event-name">${escapeHtml(ev.name)}</div>
-        <div class="event-meta">${formatEventDate(ev)}</div>
+        <div class="event-name">${escapeHtml(ev.name)}${ev.ai_generated ? ' <span class="badge badge-muted" style="font-size:9.5px;vertical-align:middle;">AI-found</span>' : ''}</div>
+        <div class="event-meta">${formatEventDate(ev)}${ev.venue_name ? ' · ' + escapeHtml(ev.venue_name) : ''}</div>
         <div class="event-impact">${escapeHtml(ev.description)}</div>
+        ${ev.expected_attendance ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">👥 Expected: ~${ev.expected_attendance.toLocaleString()} people</div>` : ""}
+        ${chaosMeterBar(ev.chaos_score)}
+        ${ev.source_url ? `<div style="margin-top:6px;"><a href="${escapeHtml(ev.source_url)}" target="_blank" rel="noopener" style="font-size:11px;">Source ↗</a></div>` : ""}
         <div class="event-actions">${eventReactionPills(ev)}</div>
       </div>
       <span class="badge ${ev.impact==='high'?'badge-crit':ev.impact==='elevated'?'badge-warn':'badge-muted'}">${ev.impact} impact</span>
-    </div>`).join("") || `<div class="card" style="padding:16px;color:var(--text-muted);">No upcoming events.</div>`;
+    </div>`).join("") || `<div class="card" style="padding:16px;color:var(--text-muted);">No upcoming events. Try "Find real events" above.</div>`;
+}
+async function discoverEvents(){
+  if(!requireAuth()) return;
+  const btn = document.getElementById("discoverEventsBtn");
+  const status = document.getElementById("eventsDiscoverStatus");
+  btn.disabled = true;
+  btn.textContent = "🔎 Searching the web…";
+  status.textContent = "Asking the AI to search for real upcoming events near you — this can take 15-30 seconds.";
+  try {
+    const result = await api('/events/discover', {method:'POST'});
+    status.textContent = `Found ${result.added} new real event${result.added===1?'':'s'}` +
+      (result.skipped_existing ? ` (${result.skipped_existing} already listed)` : '') + ".";
+    await loadEvents();
+  } catch(e){
+    status.textContent = "Couldn't discover events: " + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔎 Find real events";
+  }
 }
 async function reactToEvent(eventId, isUp){
   if(!requireAuth()) return;
@@ -2104,7 +2149,7 @@ async function deleteEventComment(commentId){
 }
 
 /* ================= INTERACTIVE MAP (Leaflet, real H3 cells) ================= */
-let map, hexLayerGroup, eventLayerGroup, incidentLayerGroup, youMarker;
+let map, hexLayerGroup, eventLayerGroup, incidentLayerGroup, newsLayerGroup, youMarker;
 function pinIcon(cls, html){
   return L.divIcon({className:'', html:`<div class="${cls}"><span>${html||''}</span></div>`, iconSize:[26,26], iconAnchor:[13,26]});
 }
@@ -2116,6 +2161,53 @@ function renderEventMarkers(){
       .bindPopup(`<b>${escapeHtml(ev.name)}</b><br>${formatEventDate(ev)}<br>${escapeHtml(ev.description)}`)
       .addTo(eventLayerGroup);
   });
+}
+/* ---- local news layer (real news, AI-discovered -- see app/discovery.py) ----
+   Deliberately rendered as a visually distinct gray square pin with its own
+   popup style, never mixed into the incidents feed/markers, so nothing here
+   ever looks like a verified user report. */
+let localNews = [];
+async function loadNews(){
+  try { localNews = await api('/news'); } catch(e){ localNews = []; }
+  renderNewsMarkers();
+}
+function renderNewsMarkers(){
+  if(!newsLayerGroup) return;
+  newsLayerGroup.clearLayers();
+  localNews.forEach(n=>{
+    const catIcon = {accident:'🚗', shooting:'🔫', protest:'📣', fire:'🔥', weather:'🌪️', other:'📰'}[n.category] || '📰';
+    const published = n.published_at ? asUtc(n.published_at).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : '';
+    L.marker([n.lat, n.lng], {icon: pinIcon('news-pin', catIcon)})
+      .bindPopup(`
+        <b>${escapeHtml(n.headline)}</b><br>
+        <span style="font-size:11px;color:#888;">📰 From local news, not a user report${published ? ' · ' + published : ''}</span><br>
+        ${escapeHtml(n.summary)}<br>
+        <a href="${escapeHtml(n.source_url)}" target="_blank" rel="noopener">Source: ${escapeHtml(n.source_name)} ↗</a>
+      `)
+      .addTo(newsLayerGroup);
+  });
+}
+async function discoverNews(){
+  if(!requireAuth()) return;
+  const btn = document.getElementById("discoverNewsBtn");
+  const status = document.getElementById("newsDiscoverStatus");
+  btn.disabled = true;
+  btn.textContent = "🔎 Searching…";
+  status.textContent = "Asking the AI to search for real recent local news — this can take 15-30 seconds.";
+  try {
+    const result = await api('/news/discover', {method:'POST'});
+    status.textContent = `Found ${result.added} new local news item${result.added===1?'':'s'}` +
+      (result.skipped_existing ? ` (${result.skipped_existing} already listed)` : '') + ".";
+    await loadNews();
+    if(!document.getElementById("newsChip").classList.contains("active")){
+      status.textContent += ' Turn on "📰 Local news" above to see them on the map.';
+    }
+  } catch(e){
+    status.textContent = "Couldn't check for local news: " + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔄 Check for local news";
+  }
 }
 function renderIncidentMarkers(filter){
   if(!incidentLayerGroup) return;
@@ -2158,6 +2250,7 @@ function initMap(){
   hexLayerGroup = L.layerGroup().addTo(map);
   eventLayerGroup = L.layerGroup().addTo(map);
   incidentLayerGroup = L.layerGroup().addTo(map);
+  newsLayerGroup = L.layerGroup(); // not added to the map by default -- see newsChip toggle
 }
 
 /* ---- search / locate / area insights (real /areas/insights) ---- */
@@ -2673,6 +2766,10 @@ document.getElementById("eventsChip").addEventListener("click", function(){
   this.classList.toggle("active");
   if(this.classList.contains("active")) eventLayerGroup.addTo(map); else map.removeLayer(eventLayerGroup);
 });
+document.getElementById("newsChip").addEventListener("click", function(){
+  this.classList.toggle("active");
+  if(this.classList.contains("active")) newsLayerGroup.addTo(map); else map.removeLayer(newsLayerGroup);
+});
 
 /* ================= INIT ================= */
 async function refreshOnTab(tab){
@@ -2687,7 +2784,7 @@ async function refreshOnTab(tab){
     try { currentUser = await api('/auth/me'); } catch(e){ authToken = null; localStorage.removeItem('chaos_token'); }
   }
   updateAuthUI();
-  await Promise.all([loadIncidents(), loadEvents(), loadVerifyQueue(), loadHeatmap()]);
+  await Promise.all([loadIncidents(), loadEvents(), loadNews(), loadVerifyQueue(), loadHeatmap()]);
   applyTheme(localStorage.getItem('chaos_theme') || "light", {persist:false});
 
   // Landed here from an emailed "reset your password" link? Open straight
