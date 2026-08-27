@@ -17,6 +17,7 @@ routers require login (see app/routers/events.py and app/routers/news.py).
 """
 import datetime
 import json
+import time
 
 from anthropic import Anthropic
 
@@ -25,6 +26,16 @@ from app.config import settings
 
 MAX_SEARCHES_PER_CALL = 6
 MODEL_MAX_TOKENS = 4096
+
+# Nominatim's usage policy caps free public-instance traffic at ~1
+# request/second and rate-limits (HTTP 429) any client that goes over it --
+# see app/places.py. discover_events()/discover_news() each geocode several
+# items back-to-back; without a delay between them, a single "discover"
+# click can burst 8-16 geocode calls in a couple seconds and trip that
+# limit. Once tripped, EVERY geocode call fails (not just the AI-discovery
+# ones) until it clears, which silently breaks normal map search and Add
+# Chaos pin placement too -- this happened for real (see git history).
+GEOCODE_THROTTLE_SECONDS = 1.1
 
 
 def _client() -> Anthropic:
@@ -51,6 +62,7 @@ def _geocode_first(address_or_place: str) -> tuple[float, float] | None:
     state = settings.discovery_state
     if state and state.lower() not in query.lower():
         query = f"{query}, {state}"
+    time.sleep(GEOCODE_THROTTLE_SECONDS)  # stay under Nominatim's ~1 req/sec policy -- see module-level comment
     results = places.search_places(query, limit=1)
     if not results:
         return None

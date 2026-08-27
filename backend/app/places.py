@@ -58,7 +58,20 @@ def search_places(query: str, limit: int = 6, near: tuple[float, float] | None =
             for row in rows
             if "lat" in row and "lon" in row
         ]
-    except Exception:
+    except Exception as e:
+        # Degrade to an empty list rather than a 500 (see module docstring),
+        # but still log it -- a silent failure here is invisible in the UI
+        # (looks identical to "no results found") and was hard to tell apart
+        # from a genuinely-unmatched address until logged. In particular,
+        # Nominatim returns 429 (visible via resp.raise_for_status() ->
+        # httpx.HTTPStatusError) if its ~1 req/sec usage policy is exceeded,
+        # which blocks EVERY geocode call -- including normal map search and
+        # Add Chaos pin placement -- until the block clears. See
+        # app/discovery.py's _geocode_first callers for why that policy
+        # matters here: a burst of rapid sequential geocode calls (e.g. AI
+        # event/news discovery processing several items in a tight loop) is
+        # exactly what can trigger it.
+        print(f"[places.search_places] Nominatim request failed for query={query!r}: {type(e).__name__}: {e}")
         results = []
 
     _search_cache[key] = results
