@@ -137,10 +137,17 @@ def confirm_phone_verification(
 
 @router.post("/password/forgot")
 def forgot_password_email(body: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
-    generic = {"message": "If an account exists for that email, a reset link has been sent."}
+    # Deliberately NOT the generic "if an account exists" wording here -- this
+    # is a single-user hobby app, not a multi-tenant product being probed by
+    # strangers, so telling the requester plainly that the email isn't
+    # registered is far more useful than the usual anti-enumeration generic
+    # message (which was actively confusing here: it made a wiped/wrong
+    # account look identical to a real send failure). If this app ever grows
+    # real other users, switch this back to the generic response.
+    generic = {"message": "A reset link has been sent to that email."}
     user = db.query(models.User).filter(models.User.email == body.email).first()
     if not user:
-        return generic
+        raise HTTPException(404, "No Chaos Tracker account is associated with that email.")
 
     token = secrets.token_urlsafe(32)
     user.reset_token = token
